@@ -1,1 +1,145 @@
-# Movie
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BDIX TV PREMIUM - XXX</title>
+    <style>
+        body { background-color: #000; color: white; font-family: sans-serif; margin: 0; padding: 0; }
+        .header { padding: 15px; text-align: center; background: #1a1a1a; border-bottom: 2px solid #ffcc00; }
+        .header h1 { margin: 0; font-size: 20px; color: #ffcc00; }
+
+        /* মুভি গ্রিড ডিজাইন */
+        .movie-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 10px; }
+        .card { background: #1a1a1a; border-radius: 8px; overflow: hidden; cursor: pointer; position: relative; border: 1px solid #333; transition: 0.3s; }
+        .card:active { transform: scale(0.95); }
+        .thumb img { width: 100%; height: 230px; object-fit: cover; display: block; }
+        .title-text { padding: 8px; font-size: 13px; text-align: left; color: #fff; height: 40px; overflow: hidden; }
+
+        /* প্লেয়ার ওভারলে */
+        #playerOverlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 9999; overflow-y: auto; padding-bottom: 50px;
+        }
+        .back-btn {
+            position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.8);
+            color: white; padding: 8px 18px; border-radius: 30px; cursor: pointer;
+            z-index: 10000; border: 1px solid #ffcc00; font-weight: bold;
+        }
+        .poster-top { width: 100%; height: 30vh; object-fit: cover; opacity: 0.5; }
+        .info-section { text-align: center; padding: 15px; }
+        .info-section h2 { color: #ffcc00; margin: 0; font-size: 20px; }
+        .download-btn {
+            display: inline-block; margin-top: 15px; padding: 10px 25px;
+            background-color: #ffcc00; color: #000; text-decoration: none;
+            font-weight: bold; border-radius: 5px;
+        }
+
+        /* ভিডিও প্লেয়ার বক্স */
+        .video-box { width: 95%; max-width: 450px; margin: 20px auto; border-radius: 12px; overflow: hidden; border: 1px solid #444; }
+        video { width: 100%; height: auto; display: block; background: #000; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>PREMIUM VIRAL VIDEO</h1>
+</div>
+
+<div class="movie-grid" id="movieGrid">
+    <p style="text-align:center; grid-column: span 2;">ভিডিও লোড হচ্ছে...</p>
+</div>
+
+<div id="playerOverlay">
+    <div class="back-btn" onclick="closePlayer()">✕ Back</div>
+    <img id="pPoster" class="poster-top" src="" alt="">
+    <div class="info-section">
+        <h2 id="pTitle"></h2>
+        <p style="color: #888;">Full HD Streaming</p>
+        <a id="pDownload" href="#" class="download-btn" target="_blank">ডাউনলোড করুন</a>
+    </div>
+    <div class="video-box">
+        <video id="pVideo" controls playsinline poster="">
+            <source src="" type="video/mp4">
+        </video>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBJ_mZrOpz9BNNLV6Wrqe55tx7ig1Fuu00",
+        authDomain: "gaming-mamun.firebaseapp.com",
+        databaseURL: "https://gaming-mamun-default-rtdb.firebaseio.com",
+        projectId: "gaming-mamun",
+        storageBucket: "gaming-mamun.firebasestorage.app",
+        messagingSenderId: "781501945251",
+        appId: "1:781501945251:web:4dac72d1212c663004b616",
+        measurementId: "G-EXFJTGGMGZ"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const movieGrid = document.getElementById('movieGrid');
+    const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
+
+    onSnapshot(q, (snapshot) => {
+        movieGrid.innerHTML = "";
+        snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            const id = docSnap.id;
+            
+            movieGrid.innerHTML += `
+                <div class="card" onclick="openPlayer('${id}', '${data.title.replace(/'/g, "\\'")}', '${data.photo}', '${data.video}', '${data.download}')">
+                    <div class="thumb">
+                        <img src="${data.photo}" alt="Poster">
+                    </div>
+                    <div class="title-text">${data.title}</div>
+                </div>
+            `;
+        });
+    });
+
+    window.openPlayer = async (id, title, poster, videoURL, downloadLink) => {
+        document.getElementById('playerOverlay').style.display = 'block';
+        document.getElementById('pTitle').innerText = title;
+        document.getElementById('pPoster').src = poster;
+        
+        const videoElement = document.getElementById('pVideo');
+        videoElement.src = videoURL;
+        videoElement.poster = poster;
+        videoElement.load();
+        
+        document.getElementById('pDownload').href = downloadLink;
+        document.body.style.overflow = 'hidden';
+
+        // ক্লিক কাউন্ট বাড়ানো
+        const postRef = doc(db, "posts", id);
+        await updateDoc(postRef, {
+            views: increment(1)
+        });
+    };
+
+    window.closePlayer = () => {
+        const videoElement = document.getElementById('pVideo');
+        document.getElementById('playerOverlay').style.display = 'none';
+        videoElement.pause();
+        videoElement.src = '';
+        document.body.style.overflow = 'auto';
+    };
+</script>
+
+<script>
+document.write(unescape('%3C%73%63%72%69%70%74%20%73%72%63%3D%22%68%74%74%70%73%3A%2F%2F%70%6C%32%38%32%37%33%33%33%39%2E%70%72%6F%66%69%74%61%62%6C%65%63%70%6D%72%61%74%65%6E%65%74%77%6F%72%6B%2E%63%6F%6D%2F%33%33%2F%66%64%2F%33%64%2F%33%33%66%64%33%64%34%62%63%63%38%61%38%37%37%63%31%62%63%31%37%37%64%65%63%35%35%31%38%38%62%65%2E%6A%73%22%3E%3C%2F%73%63%72%69%70%74%3E%0A'));
+</script>
+
+<script>
+document.write(unescape('%3C%73%63%72%69%70%74%20%73%72%63%3D%22%68%74%74%70%73%3A%2F%2F%70%6C%32%38%32%37%33%33%34%37%2E%70%72%6F%66%69%74%61%62%6C%65%63%70%6D%72%61%74%65%6E%65%74%77%6F%72%6B%2E%63%6F%6D%2F%38%30%2F%36%61%2F%31%62%2F%38%30%36%61%31%62%32%62%63%32%39%39%61%33%36%37%37%62%63%32%35%36%30%34%38%62%31%32%63%30%62%65%2E%6A%73%22%3E%3C%2F%73%63%72%69%70%74%3E%0A'));
+</script>
+
+</body>
+</html>
+
