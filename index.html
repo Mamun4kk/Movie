@@ -104,12 +104,6 @@
 </head>
 <body>
 
-    <!-- ⚠️ HTTPS সতর্কবার্তা ব্যানার (শুধুমাত্র HTTPS থাকলে দেখাবে) -->
-    <div id="https-warning" class="hidden bg-red-600 text-white text-[11px] font-bold text-center py-2 px-4 fixed top-0 left-0 right-0 z-[9999] shadow-md flex justify-between items-center">
-        <span>⚠️ আপনি HTTPS ব্যবহার করছেন! ভিডিও প্লে করতে এখানে ক্লিক করুন:</span>
-        <a id="http-link" href="#" class="bg-white text-red-600 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase">Switch to HTTP</a>
-    </div>
-
     <header class="fixed top-0 left-0 right-0 h-[60px] z-[500] px-4 bg-black/90 backdrop-blur-md flex justify-between items-center border-b border-white/5">
         <h1 class="rgb-text text-xl tracking-wider uppercase">GM BDIX TV</h1>
         <div class="text-[10px] bg-cyan-500/10 text-cyan-400 px-3 py-1 rounded-full border border-cyan-500/20 font-bold uppercase tracking-wider" id="live-count-badge">0 Channels</div>
@@ -166,20 +160,25 @@
         // 🛑 আপনার দেওয়া নতুন GitHub M3U প্লেলিস্টের লিংক
         const m3uPlaylistUrl = "https://raw.githubusercontent.com/Zaman-Topu/Ip-tv-Collection/main/FINAL_IPTV_ACTIVE.m3u";
 
-        function checkHttps() {
-            if (window.location.protocol === 'https:') {
-                var warningBanner = document.getElementById('https-warning');
-                var httpLink = document.getElementById('http-link');
-                if (warningBanner && httpLink) {
-                    warningBanner.classList.remove('hidden');
-                    httpLink.href = "http://" + window.location.hostname + window.location.pathname;
+        function startAppEngine() {
+            // 💾 Local Storage থেকে পূর্বে সেভ করা চ্যানেল ডাটা লোড করা হচ্ছে (স্পিড বৃদ্ধির জন্য)
+            var cachedChannels = null;
+            try {
+                cachedChannels = localStorage.getItem("gm_cached_channels");
+            } catch (e) {
+                console.warn("LocalStorage storage blocked.");
+            }
+
+            if (cachedChannels) {
+                try {
+                    window.masterChannels = JSON.parse(cachedChannels);
+                    hideVipLoader();
+                    buildChannelsGrid(window.masterChannels);
+                } catch(e) {
+                    try { localStorage.clear(); } catch(x){}
                 }
             }
-        }
-
-        function startAppEngine() {
-            checkHttps(); // HTTPS চেক
-            executePlaylistFetch(); // সরাসরি ফ্রেশ ডাটা রিকোয়েস্ট
+            executePlaylistFetch();
         }
 
         function executePlaylistFetch() {
@@ -212,6 +211,12 @@
                     
                     if (parsedChannels && parsedChannels.length > 0) {
                         window.masterChannels = parsedChannels;
+                        
+                        // 💾 ভবিষ্যতে দ্রুত লোডের জন্য লোকাল মেমরিতে সেভ করা হচ্ছে
+                        try {
+                            localStorage.setItem("gm_cached_channels", JSON.stringify(parsedChannels));
+                        } catch(e){}
+
                         hideVipLoader();
                         buildChannelsGrid(window.masterChannels);
                     } else {
